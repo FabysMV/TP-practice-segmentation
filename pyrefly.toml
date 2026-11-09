@@ -1,0 +1,8 @@
+python-version = "3.10"
+search-path = [
+    ".",
+    "model"
+]
+site-package-path = [
+    "C:/Users/fabym/anaconda3/envs/cv_unet/Lib/site-packages"
+]

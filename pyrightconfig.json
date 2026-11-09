@@ -1,0 +1,10 @@
+{
+  "include": [
+    "."
+  ],
+  "extraPaths": [
+    "C:/Users/fabym/anaconda3/envs/cv_unet/Lib/site-packages"
+  ],
+  "venvPath": "C:/Users/fabym/anaconda3/envs",
+  "venv": "cv_unet"
+}
