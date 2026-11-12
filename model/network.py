@@ -1,4 +1,5 @@
 # import the necessary packages
+from sympy.solvers.diophantine.diophantine import length
 from . import config
 from torch.nn import ConvTranspose2d
 from torch.nn import Conv2d
@@ -24,7 +25,7 @@ class Block(Module):
 
 class SimpleConv(Module):
     def __init__(self, enc_channels=(3, 16, 32, 64),
-                 dec_channels=(64, 32, 16, 1)):
+                 dec_channels=(64, 32, 16, 8)):
         super().__init__()
 
         # store the encoder blocks and maxpooling layer
@@ -43,6 +44,9 @@ class SimpleConv(Module):
         self.upconv = ModuleList([
             ConvTranspose2d(dec_channels[i], dec_channels[i + 1], kernel_size=2, stride=2)
             for i in range(len(dec_channels) - 1)])
+                # Last conv to get 1 channel
+        self.last_conv = Conv2d(in_channels=self.channels[-1], out_channels=1, kernel_size=1)
+
 
     def forward(self, x):
         # loop through the encoder blocks
@@ -59,14 +63,21 @@ class SimpleConv(Module):
             x = self.dec_blocks[i](x)
 
         # return the final decoder output
+        x = self.last_conv(x)     
         return x
 
 class UNet(Module):
 
-    def __init__(self, enc_channels=(3, 16, 32, 64),
-                 dec_channels=(64, 32, 16, 8)):
+    # def __init__(self, enc_channels=(3, 16, 32, 64),
+    #              dec_channels=(64, 32, 16, 8)):
+    def __init__(self, num_features = 16, depth_enc = 3):
         # Dec_channels are different from simple convolution, it ends at 8 before applying the last conv
         super().__init__()
+        # Compute input and output channels based on number of features and depth
+        enc_channels = [num_features*(2**n) for n in range(depth_enc)]
+        dec_channels = enc_channels[::-1]
+        dec_channels.append(dec_channels[-1]//2)
+        enc_channels.insert(0,3)
         # Enc_channels define the progression of feature channels
         # store the encoder blocks and maxpooling layer
         self.enc_blocks = ModuleList([Block(enc_channels[i], enc_channels[i+1])
@@ -86,10 +97,9 @@ class UNet(Module):
         self.upconv = ModuleList([
             ConvTranspose2d(dec_channels[i], dec_channels[i+1], kernel_size=2, stride=2)
             for i in range(len(dec_channels) - 1)])
-        
+        self.bottleneck = Block(enc_channels[-1], enc_channels[-1]) 
         # Last conv to get 1 channel
         self.last_conv = Conv2d(in_channels=self.channels[-1], out_channels=1, kernel_size=1)
-
 
     def forward(self, x):
         # loop through the encoder blocks
@@ -103,6 +113,8 @@ class UNet(Module):
             skip_connections.append(x)
             # then apply pooling
             x = self.pooling(x)
+        # process latent space
+        x = self.bottleneck(x)
         # Now x is the latent space
         # decoder: loop through the number of channels
         # now, from bottom to up: we concatenate the upsampled with the encoder results
@@ -117,15 +129,20 @@ class UNet(Module):
 
         # Last conv to get 1 channel
         x = self.last_conv(x)
-        # return the final decoder output
-        x = self.dec_blocks[i](x)
 
         return x
         
 class HourGlass(Module):
-    def __init__(self, enc_channels=(3, 16, 32, 64),
-                 dec_channels=(64, 32, 16, 8)):
+    # def __init__(self, enc_channels=(3, 16, 32, 64),
+    #              dec_channels=(64, 32, 16, 8)):
+    def __init__(self, num_features = 16, depth_enc = 3):
+        # Dec_channels are different from simple convolution, it ends at 8 before applying the last conv
         super().__init__()
+        # Compute input and output channels based on number of features and depth
+        enc_channels = [num_features*(2**n) for n in range(depth_enc)]
+        dec_channels = enc_channels[::-1]
+        dec_channels.append(dec_channels[-1]//2)
+        enc_channels.insert(0,3)
 
         # store the encoder blocks and maxpooling layer
         self.enc_blocks = ModuleList([Block(enc_channels[i], enc_channels[i+1])
@@ -161,8 +178,7 @@ class HourGlass(Module):
             x = self.upconv[i](x)
             x = self.dec_blocks[i](x)
         x = self.last_conv(x)
-    
-        #
+
         # return the final decoder output
         return x
 
