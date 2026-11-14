@@ -1,7 +1,12 @@
 # USAGE
 # python train.py
 
+# Hyperparameter management
+import argparse
+import os
+
 # import the necessary packages
+# from networkx import config
 from model.dataset import SegmentationDataset
 from model.network import UNet
 from model.network import HourGlass
@@ -24,11 +29,30 @@ import pandas as pd
 from PyQt5.QtCore import QLibraryInfo
 # from PySide2.QtCore import QLibraryInfo
 
-if __name__ == '__main__':
-    os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(QLibraryInfo.PluginsPath)
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train Image Segmentation Models")
+    parser.add_argument("--model", type=str, choices=["unet", "hourglass", "simpleconv"], required=True)
+    parser.add_argument("--features", type=int, default=64, help="Number of base features")
+    parser.add_argument("--depth", type=int, default=4, help="Depth of encoding layers")
+    return parser.parse_args()
 
-    if(not(os.path.exists(config.BASE_OUTPUT))):
-        os.mkdir(config.BASE_OUTPUT)
+
+if __name__ == '__main__':
+    args = parse_args()
+    if args.model == "unet":
+        model = UNet(num_features=args.features, depth_enc=args.depth)
+        model_name = model.__class__.__name__
+    elif args.model == "hourglass":
+        model = HourGlass(num_features=args.features, depth_enc=args.depth)
+        model_name = model.__class__.__name__
+    else:
+        model = SimpleConv()
+        model_name = model.__class__.__name__
+
+    os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(QLibraryInfo.PluginsPath)
+    BASE_OUTPUT, BEST_MODEL_PATH, PLOT_PATH, PLOT_PREDICT_PATH, TEST_PATH, VAL_PATH, TRAIN_PATH = config.get_paths_for_experiment(model_name, args.features, args.depth)
+    if(not(os.path.exists(BASE_OUTPUT))):
+        os.mkdir(BASE_OUTPUT)
         
     # load the image and mask filepaths in a sorted manner
     imagePaths = sorted(list(paths.list_images(config.IMAGES_PATH)))
@@ -46,7 +70,7 @@ if __name__ == '__main__':
     # write the testing image paths to disk so that we can use then
     # when evaluating/testing our model
     print("[INFO] saving testing image paths...")
-    f = open(config.TEST_PATH,"w")
+    f = open(TEST_PATH,"w")
     f.write("\n".join(testImages))
     f.close()
 
@@ -67,8 +91,8 @@ if __name__ == '__main__':
     # model = SimpleConv((3,16),(16,1))
     # model = HourGlass((3,16,32,64),(64,32,16,1))
     # model = UNet((3,16,32,64),(64,32,16,1)) # <-- debería dejarse así?
-    model = SimpleConv()
-    model_name = model.__class__.__name__
+    # model = SimpleConv()
+    # model_name = model.__class__.__name__
     cnnet = model.to(config.DEVICE)
     print(model)
 
@@ -149,12 +173,12 @@ if __name__ == '__main__':
     plt.ylabel("loss")
     plt.legend()
     
-    plt.savefig(config.PLOT_PATH)
+    plt.savefig(PLOT_PATH)
     plt.show()
 
     # save history to csv
     df = pd.DataFrame(H)
-    df.to_csv(os.path.join(config.BASE_OUTPUT,f"training_history_{model_name}.csv"), index=False)
+    df.to_csv(os.path.join(BASE_OUTPUT,f"training_history_{model_name}.csv"), index=False)
 
     # serialize the model to disk
-    torch.save(cnnet, config.BEST_MODEL_PATH)
+    torch.save(cnnet, BEST_MODEL_PATH)

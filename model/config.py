@@ -8,18 +8,6 @@ import os
 BASE_PATH = "/matieres/5MMVORF/04-dataset"
 IMAGES_PATH = os.path.join(BASE_PATH, "images")
 MASKS_PATH = os.path.join(BASE_PATH, "masks")
-
-# define the path to the base output directory
-BASE_OUTPUT = "output"
-
-# define paths to output model, plot and testing image paths
-BEST_MODEL_PATH = os.path.join(BASE_OUTPUT, "best_model.pth")
-PLOT_PATH = os.path.join(BASE_OUTPUT, "convergence_plot.png")
-PLOT_PREDICT_PATH = os.path.join(BASE_OUTPUT, "predict_plot.png")
-TEST_PATH = os.path.join(BASE_OUTPUT, "test_data.csv")
-VAL_PATH = os.path.join(BASE_OUTPUT, "val_data.csv")
-TRAIN_PATH = os.path.join(BASE_OUTPUT, "training_data.csv")
-
 # define the test split
 TEST_SPLIT = 0.15
 TEST_VAL_SPLIT = [0.1, 0.1]
@@ -49,3 +37,16 @@ INPUT_IMAGE_HEIGHT = 128
 
 # define threshold to filter weak predictions
 THRESHOLD = 0.5
+
+
+def get_paths_for_experiment(model_name, features, depth):
+    # define the path to the base output directory personalized for each architecture
+    BASE_OUTPUT = f"output_{model_name}_{features}_{depth}"
+    # define paths to output model, plot and testing image paths
+    BEST_MODEL_PATH = os.path.join(BASE_OUTPUT, "best_model.pth")
+    PLOT_PATH = os.path.join(BASE_OUTPUT, "convergence_plot.png")
+    PLOT_PREDICT_PATH = os.path.join(BASE_OUTPUT, "predict_plot.png")
+    TEST_PATH = os.path.join(BASE_OUTPUT, "test_data.csv")
+    VAL_PATH = os.path.join(BASE_OUTPUT, "val_data.csv")
+    TRAIN_PATH = os.path.join(BASE_OUTPUT, "training_data.cv")
+    return BASE_OUTPUT, BEST_MODEL_PATH, PLOT_PATH, PLOT_PREDICT_PATH, TEST_PATH, VAL_PATH, TRAIN_PATH

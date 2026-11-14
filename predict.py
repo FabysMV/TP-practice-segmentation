@@ -1,6 +1,10 @@
 # USAGE
 # python predict.py
 
+# Hyperparameter management
+import argparse
+import os
+
 # import the necessary packages
 from model import config
 import matplotlib.pyplot as plt
@@ -11,6 +15,18 @@ import os
 
 from PyQt5.QtCore import QLibraryInfo
 # from PySide2.QtCore import QLibraryInfo
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train Image Segmentation Models")
+    parser.add_argument("--model", type=str, choices=["unet", "hourglass", "simpleconv"], required=True)
+    parser.add_argument("--features", type=int, default=64, help="Number of base features")
+    parser.add_argument("--depth", type=int, default=4, help="Depth of encoding layers")
+    return parser.parse_args()
+
+
+args = parse_args()
+
+BASE_OUTPUT, BEST_MODEL_PATH, PLOT_PATH, PLOT_PREDICT_PATH, TEST_PATH, VAL_PATH, TRAIN_PATH = config.get_paths_for_experiment(args.model, args.features, args.depth)
 
 
 def get_img_name(imagePath):
@@ -40,7 +56,7 @@ def prepare_plot(origImage, origMask, predMask, predProb, imagePath):
         # set the layout of the figure and display it
         fig.tight_layout()
         fig.show()
-        plotPath=config.PLOT_PATH.replace(get_img_name(config.PLOT_PATH),'predict_plot_' + get_img_name(imagePath))
+        plotPath=PLOT_PATH.replace(get_img_name(config.PLOT_PATH),'predict_plot_' + get_img_name(imagePath))
         fig.savefig(plotPath)
 
 def make_predictions(model, imagePath):
@@ -92,17 +108,18 @@ def make_predictions(model, imagePath):
 
 
 if __name__ == '__main__':
+
         os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(QLibraryInfo.PluginsPath)
                 
         # load the image paths in our testing file and randomly select 10
         # image paths
         print("[INFO] loading up test image paths...")
-        imagePaths = open(config.TEST_PATH).read().strip().split("\n")
+        imagePaths = open(TEST_PATH).read().strip().split("\n")
         imagePaths = np.random.choice(imagePaths, size=10)
         
         # load our model from disk and flash it to the current device
         print("[INFO] load up model...")
-        unet = torch.load(config.BEST_MODEL_PATH, weights_only=False).to(config.DEVICE)
+        unet = torch.load(BEST_MODEL_PATH, weights_only=False).to(config.DEVICE)
 
         # iterate over the randomly selected test image paths
         for path in imagePaths:
